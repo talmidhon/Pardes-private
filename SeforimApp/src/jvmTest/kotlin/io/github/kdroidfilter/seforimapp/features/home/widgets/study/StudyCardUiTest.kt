@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
@@ -15,7 +16,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import io.github.kdroidfilter.seforimapp.core.study.DayOutcome
+import io.github.kdroidfilter.seforimapp.core.study.DayReport
 import io.github.kdroidfilter.seforimapp.core.study.StudyPlan
+import io.github.kdroidfilter.seforimapp.core.study.StudyStats
+import io.github.kdroidfilter.seforimapp.core.study.TrackingMode
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.testAppGraph
 import io.github.kdroidfilter.seforimlibrary.core.models.Book
@@ -127,5 +132,58 @@ class StudyCardUiTest {
             onNodeWithTag("study-new-plan").assertIsDisplayed()
             System.getenv("STUDY_CARD_SHOT")?.let { ImageIO.write(onRoot().captureToImage().toAwtImage(), "png", File(it)) }
             assertEquals(emptyList(), ticked)
+        }
+
+    @Test
+    fun `a day can be reported partly done or not done, the run and the share show, and the history opens`() =
+        runDesktopComposeUiTest(width = 420, height = 360) {
+            val reported = mutableListOf<Pair<Long, DayReport?>>()
+            val viewed = mutableListOf<Long>()
+            val history = listOf(HistoryDay(CalendarDay(start, true, false, 5, 0, 0), null, DayOutcome.DONE))
+            val withStats =
+                plans[0].copy(
+                    plan = plans[0].plan.copy(tracking = TrackingMode.FULL),
+                    stats = StudyStats(done = 9, missed = 1, currentStreak = 4, bestStreak = 6),
+                    history = history,
+                )
+            setContent {
+                IntUiTheme(isDark = false) {
+                    CompositionLocalProvider(LocalAppGraph provides testAppGraph(), LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        StudyCard(
+                            plans = listOf(withStats),
+                            done = emptySet(),
+                            today = true,
+                            onDone = { _, _ -> },
+                            onOpen = {},
+                            onEdit = {},
+                            onNew = {},
+                            modifier = Modifier.size(420.dp, 360.dp),
+                            onReport = { plan, report -> reported += plan.id to report },
+                            onHistory = { viewed += it.id },
+                        )
+                    }
+                }
+            }
+            onNodeWithText("רצף 4 · עמידה ביעד 90%").assertIsDisplayed()
+            onNodeWithTag("study-partial-1").performClick()
+            onNodeWithTag("study-missed-1").performClick()
+            onNodeWithTag("study-history-1").performClick()
+            waitForIdle()
+            assertEquals(listOf(1L to DayReport.PARTIAL, 1L to DayReport.NOT_DONE), reported)
+            assertEquals(listOf(1L), viewed)
+        }
+
+    @Test
+    fun `a day only reported when done has no button for a day not done`() =
+        runDesktopComposeUiTest(width = 420, height = 360) {
+            setContent {
+                IntUiTheme(isDark = false) {
+                    CompositionLocalProvider(LocalAppGraph provides testAppGraph(), LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        StudyCard(plans.take(1), emptySet(), true, { _, _ -> }, {}, {}, {}, Modifier.size(420.dp, 360.dp))
+                    }
+                }
+            }
+            onNodeWithTag("study-partial-1").assertIsDisplayed()
+            onNodeWithTag("study-missed-1").assertDoesNotExist()
         }
 }

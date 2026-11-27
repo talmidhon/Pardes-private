@@ -9,6 +9,7 @@ import dev.zacsweers.metro.SingleIn
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.AccentColor
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.IntUiThemes
 import io.github.kdroidfilter.seforimapp.earthwidget.WidgetAntiAliasing
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeBackgroundSettings
 import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
 import io.github.kdroidfilter.seforimapp.features.siddur.OpenSiddurSwitch
 import io.github.kdroidfilter.seforimapp.framework.di.AppScope
@@ -922,6 +923,10 @@ class AppSettings(
                 KEY_SHOW_HOME_WALLPAPER,
                 // Pardes: the Home's big name, as its wallpaper (request 67 of stage 3)
                 HomeLogoSettings.shown.key,
+                // Pardes (the daily portion's upgrade, part B): the Home's background, the wallpaper or an acrylic
+                HomeBackgroundSettings.acrylic.key,
+                HomeBackgroundSettings.acrylicOpacity.key,
+                HomeBackgroundSettings.acrylicBlur.key,
                 KEY_COMPACT_MODE,
             )
 

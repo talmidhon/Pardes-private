@@ -598,15 +598,17 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/ui/DisplaySettingsScreen.kt`
 
-- **Change:** modified, +22 −2 lines. Feature: The Home's big name shown or hidden, Commentators a page in a tall pane.
+- **Change:** modified, +36 −8 lines. Feature: The Home's big name shown or hidden, Commentators a page in a tall pane, The Home's acrylic background.
 - **What:** `HomeLogoCard()` right after the wallpaper's card, with a comment marked "Pardes:", and its import.
   Since 2026-11-24 `MaxCommentatorsPerPageCard` takes its title and its description (Zayit's by default), and a second
   one, under a comment marked "Pardes:", is the tall pane's (`CommentariesPaneSettings.tallMaxPerPage`, request 99 of
-  stage 3), right under Zayit's own.
+  stage 3), right under Zayit's own. Since 2026-11-27 `HomeBackgroundCard()` comes before the wallpaper's card, which is shown only
+  while the image is the Home's background (`HomeBackgroundSettings.acrylic` off), under a comment marked "Pardes:".
 - **Why:** request 67 of `docs/DESKTOP_STAGE3_PLAN.md` (2026-11-19): "אפשרות בהגדרות תצוגה להסתיר את הכיתוב הגדול של פרדס
-  בדף הבית"; the card sits with the Home's other look, its wallpaper.
+  בדף הבית"; the card sits with the Home's other look, its wallpaper. The acrylic: the user's request for a background with no image
+  at all, chosen in the same place as the wallpaper's.
 - **Kind:** Pardes feature hook.
-- **Merge risk:** small: one line among the cards, and two parameters with defaults and a second call of Zayit's card.
+- **Merge risk:** small: a few lines among the cards, and two parameters with defaults and a second call of Zayit's card.
 - **Smaller:** already minimal.
 - **Tests:** tried in the app.
 
@@ -743,8 +745,8 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/settings/AppSettings.kt`
 
-- **Change:** modified, +330 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
-  smart siddur, The Home's big name shown or hidden.
+- **Change:** modified, +335 −0 lines. Feature: Daf view, Two pages side by side, Library location, Semantic search packs, Feedback mode, the open
+  smart siddur, The Home's big name shown or hidden, The Home's acrylic background.
 - **What:**
   - **Daf view:** flows and getters/setters for its zoom (`daf_page_zoom`, 0.3 to 4, browser-like `DAF_ZOOM_LEVELS`;
     a size since request 73 of the list after the public release, 1 a row of pages 1000 dp wide, `PageFit.kt`, under
@@ -788,6 +790,8 @@ The entries of this section by kind:
   - **The Home's big name:** `HomeLogoSettings.shown`'s key among `PORTABLE_KEYS`, as the wallpaper's (request 67 of
     stage 3), with a comment marked "Pardes:".
   - Imports: `PreferencesSettings`, `flow.update`, `UUID`, `Preferences`, `OpenSiddurSwitch`, `HomeLogoSettings`.
+  - **The Home's acrylic background:** `HomeBackgroundSettings`' three keys (`acrylic`, `acrylicOpacity`, `acrylicBlur`) among
+    `PORTABLE_KEYS`, under a comment marked "Pardes:", beside the Home's big name's, and its import.
 - **Why:** Zayit keeps every preference here with its flow, so Pardes's features keep theirs here too (`8d3825e7` and
   the daf commits, `58586e1a`, `cb0f0a27`, `90f8a24a`, `ddf604d8`). The siddur's switch is the one preference here
   that is mirrored outside the class: `installedSiddur` is a top-level value Zayit's code reads in composition and
@@ -1794,9 +1798,9 @@ The entries of this section by kind:
 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeView.kt`
 
-- **Change:** modified, +593 −121 lines. Feature: Search in categories, Search in several books and categories, Book and
+- **Change:** modified, +603 −122 lines. Feature: Search in categories, Search in several books and categories, Book and
   author titles search, PDF books, Search modes, The Home's big name shown or hidden, A card's book in place of the
-  Home, Daily study plans, One marking in every popup, Scrolling alike.
+  Home, Daily study plans, One marking in every popup, Scrolling alike, The Home's acrylic background.
 - **What:**
   - `BookSuggestion`, `CatBookRow` and `catBookRows` become `internal`, for tests.
   - `CatBookRow.Category`: a category to search in. `catBookRows` orders references, books named by their title, a title
@@ -1875,6 +1879,9 @@ The entries of this section by kind:
     query (`skipNextTocQuery`), so the book's entries show once typed in, not at the focus the bar takes after a
     check, where Enter opened the first. With `SearchHomeViewModel.onPickBook`'s, the field's panel then holds the
     search in the book alone ("חיפוש בתוך …"), which Enter runs.
+  - **The Home's acrylic background:** `HomeView` reads `HomeBackgroundSettings` (`acrylic`, `acrylicOpacity`, `acrylicBlur`) and,
+    with the acrylic on, draws `AcrylicBackground` (`HomeAcrylic.kt`) in place of the wallpaper's three layers: no image is
+    drawn, hidden or decoded; with it off, the wallpaper's layers are as they were (`else if (showWallpaper)`).
 - **Why:** a search in a whole category (`54180126`), in several books and categories together picked with Tab
   (`574f3d55`, `7eb98872`), in a category's base books alone (`37d4fe60`, `941bdfab`), books and authors found by name
   (`67fe471e`), and a new tab's bar empty as in Zayit (`03c84c1f`). The user asked on 2026-11-09 that an author no longer
@@ -2568,8 +2575,8 @@ alone. Every entry below that says "Search in categories" is part of that revers
 
 #### `SeforimApp/src/commonMain/composeResources/values/strings.xml`
 
-- **Change:** modified, +466 −1 lines. Feature: every Pardes feature with interface text.
-- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 429 Hebrew strings added in twenty-two blocks,
+- **Change:** modified, +473 −1 lines. Feature: every Pardes feature with interface text.
+- **What:** one string removed, `font_rashi_amiti` (the font is gone), and 435 Hebrew strings added in twenty-three blocks,
   several under a comment naming their feature:
   - library location and move: `library_location_*` (18), `library_move_*` (14), `library_problem_*` (10),
     `library_install_*` (3, the last the library found in the folder chosen for the install);
@@ -2661,11 +2668,12 @@ alone. Every entry below that says "Search in categories" is part of that revers
     `settings_search_anywhere_keys` with its description (the card that shows the line again);
   - after Zayit's `settings_max_commentators_per_page_*`, under a comment: `settings_max_commentators_per_page_tall`
     and its description (the commentaries pane at the window's side, request 99 of stage 3);
+  - the Home's background, the wallpaper image or an acrylic: `settings_home_background*` (6).
 - **Why:** Zayit keeps every interface text here, in Hebrew (`AGENTS.md`), so Pardes's features do too. Pardes's own
   texts that replace Zayit's (the app's name, the about texts) are not here but in the brand overlay
   (`branding/pardes/composeResources`).
 - **Kind:** Pardes feature in Zayit's file.
-- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); nineteen insertion points (the onboarding's two blocks stand together), each a possible
+- **Merge risk:** medium: Zayit adds strings in most releases (0.6.13 does); twenty insertion points (the onboarding's two blocks stand together), each a possible
   conflict, though a mechanical one.
 - **Smaller:** the blocks could all sit at the end of the file, one comment each, so that a merge meets one place.
 - **Tests:** the build (a missing key fails `generateComposeResClass`); the UI tests of each feature.
@@ -9587,7 +9595,7 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/commonMain/sqldelight/io/github/kdroidfilter/seforimapp/db/StudyPlans.sq`
 
 - **Feature:** Daily study plans.
-- **Size:** 86 lines.
+- **Size:** 200 lines.
 - **What:** the tables `study_plan` (the book by id, title and categories' titles; the depth; the first unit by its
   headings, `\u001F` between two; how many a day; the first day as an epoch day; the weekdays as bits, Sunday lowest;
   whether to start again; the order) and `study_plan_done` (a plan's days marked learnt, key `planId, day`), and their
@@ -9595,7 +9603,14 @@ its book or category is found in one field as the search's bar finds them, with 
   `unmarkDone` and `selectDoneOn`. Since request 64 of stage 3, `study_plan_more`, what a plan holds besides, made in
   a user DB of before by `CREATE TABLE IF NOT EXISTS` (a plan without a row is a book's by its depth, a part a day): its
   category by id (0 for a book), in its base books alone, its unit by name, and the days of a part; with `selectMore`,
-  `saveMore` (`INSERT OR REPLACE`), `deleteMore`, and `isDone` (a plan's tick on a day).
+  `saveMore` (`INSERT OR REPLACE`) and `deleteMore`. Since the daily portion's upgrade (2026-11-27): five tables, made in a user DB of before by `CREATE TABLE IF NOT EXISTS` (a plan without a row is as it was):
+  `study_plan_meta` (name, description, the day the user ended it, how its days are reported, the headings of the last unit,
+  the minute it starts at, its start put off), `study_plan_goal` (the goals after the first, from which day each holds),
+  `study_plan_pause` (the days paused, an open one without an end), `study_plan_report` (a day's report: done, partly or
+  not, one a day, `INSERT OR REPLACE`) and `study_plan_book` (the books a category's plan studies, by id and title); their
+  queries (`selectMeta`, `saveMeta`, `selectGoals`, `saveGoal`, `openPause`, `closePause`, `deletePause`, `saveReport`,
+  `selectReportsOf`, `selectReportsOn`, `saveBook`, `selectBooks`, the `delete…Of` of each) and `selectOne`, `selectDoneOf`.
+  `study_plan_done` stays: its marks are read as days done, `markDone` kept for them, `isDone` gone for the reports'.
 - **Reached from:** `StudyPlanStore.kt` (through SQLDelight's generated `UserSettingsDb`).
 - **Follows:** Zayit's user-DB `.sq` files beside it, created with `IF NOT EXISTS`, and `CommentatorDefaults.sq`, which
   keeps a book by names so that a new library finds it.
@@ -9604,13 +9619,18 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStore.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 195 lines.
+- **Size:** 442 lines.
 - **What:** `StudyPlan` (a plan's book, depth, first unit, pace, first day, weekdays and restart) and `StudyPlanStore`,
   the plans and their ticks in the user DB: `plans`, `save` (a new one last, its id), `delete` (with its ticks),
   `doneOn` and `setDone`, and a `revision` flow; the weekdays as one number (`toMask`, `weekdaysOf`). Since request 64
   of stage 3, a plan's `category`, `baseBooksOnly`, `unitName` (`DAF_UNIT`, `BOOK_UNIT`) and `periodDays`, kept in
   `study_plan_more` (`saveMore`: a row only for a plan that needs one, deleted with the plan), and `isDone` (a plan's
-  tick on a day, a part of several days ticked on its first).
+  tick on a day, a part of several days ticked on its first). Since the daily portion's upgrade (2026-11-27): `StudyPlan` gains its name, description, `tracking`, `end`, `books` (`PlanBookRef`), `startMinute`, `postponedDays`,
+  `startGoal` with `goalChanges`, `pauses` and `finished` (all with defaults, so a plan of before is read as it was), and
+  `firstDay` and `state`; `StudyPlanStore` takes a clock, and keeps reports (`setReport`, `reportOn`, `reportsOf`,
+  `reportsOn`, a mark of before read as done, `setDone` and `doneOn` as they were), `pause`, `resume`, `finish`,
+  `postpone` (once) and the goal's change: `save` records a goal changed after the plan began as a change from today
+  (`settleGoal`) and leaves the goal it began with, so the days before keep their parts; `delete` takes all it holds.
 - **Reached from:** `AppCoreBindings.kt` (`provideStudyPlanStore`), `AppGraph.kt`, `StudyWidget.kt`,
   `StudyPlanEditor.kt`.
 - **Follows:** Zayit's user-DB stores (`ShnayimMikraStore`: a SQLDelight table, `Dispatchers.IO`, a `revision` flow).
@@ -9619,7 +9639,7 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyParts.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 275 lines.
+- **Size:** 310 lines.
 - **What:** the units of a plan and the day's part, plain functions: a table of contents in reading order
   (`readingOrder`), the depths worth studying by (`studyLevels`, more than one entry each), a depth's units with their
   headings and the line the next one starts on (`studyUnits`), where a plan starts by headings (`startIndexOf`), what a
@@ -9629,7 +9649,8 @@ its book or category is found in one field as the search's bar finds them, with 
   the days before, past the end from the start again or done), and the texts (`partLabel` "פרקים כג–כז",
   `perPeriodLabel` "10 פרקים בשבוע", `weekdaysLabel`). Since request 64 of stage 3: a unit's book (`StudyUnit.bookId`)
   and a category's books with their contents (`PlanBook`); a category's units are `StudyBooks.kt`'s and the parts of
-  several days `StudyPeriods.kt`'s, moved there on 2026-11-22, `detekt.yml` holding a file to 15 functions.
+  several days `StudyPeriods.kt`'s, moved there on 2026-11-22, `detekt.yml` holding a file to 15 functions. Since the daily portion's upgrade (2026-11-27): `DayPart.Paused`, `dayPartFrom` (the day's part after the units that went by, each day by its own goal;
+  `dayPart` is it for a plan with no change) and `StudyUnit`'s `firstLine` and `lastLine`, for a unit the user cut by lines.
 - **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
 - **Follows:** the luach widgets' day reckoning (`LuachData.kt`: `JewishCalendar` by date and region).
 - **Tests:** `StudyPartsTest`.
@@ -9638,12 +9659,13 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyBooks.kt`
 
 - **Feature:** Daily study plans (request 64 of stage 3).
-- **Size:** 94 lines.
+- **Size:** 133 lines.
 - **What:** a whole category studied book after book: a daf of two amudim (`dafUnits`), a book's units by a unit's name
   (`bookUnits`: the depth so named, or its amuds two by two for a daf), a category's books one after the other
   (`categoryUnits`: each a unit, or its units by the name, its title first among their headings; a book without the
   unit as one), and the names a category or a book can be learnt by (`categoryUnitNames`, the commonest first, a daf, a
-  book; `bookUnitNames`). Moved out of `StudyParts.kt` on 2026-11-22, `detekt.yml` holding a file to 15 functions.
+  book; `bookUnitNames`). Moved out of `StudyParts.kt` on 2026-11-22, `detekt.yml` holding a file to 15 functions. Since the daily portion's upgrade (2026-11-27): `ChunkUnit` (so many lines of a book, with a name of the user's), `chunkOf` (read from a
+  plan's unit name, `#20#חצי עמוד`) and `chunkUnits` (a book's lines in runs, the last the rest).
 - **Reached from:** `StudyWidget.kt`, `StudyPlanEditor.kt`.
 - **Follows:** Pardes's `StudyParts.kt` (`studyLevels`, `studyUnits`).
 - **Tests:** `StudyPartsTest`.
@@ -9665,7 +9687,7 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyWidget.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 434 lines.
+- **Size:** 570 lines.
 - **What:** the Home widget `StudyWidget` ("הלימוד שלי", 6×4 cells, from 4×3 to 12×8) and its card `StudyCard`: a row
   for each plan with the box ticked once the day's part is learnt, the book, the part, its pace, its day of study and a
   bar of how far into the book it reaches, a pencil on hover to edit it, and "+ תוכנית חדשה"; `shownPlan` reads a plan's
@@ -9679,7 +9701,13 @@ its book or category is found in one field as the search's bar finds them, with 
   marked so as the bar's chip (`scope_base_books_label`: "שולחן ערוך (ספרי יסוד)"), whether its book or category is in
   the library (`ShownPlan.found`), a part of several days shown every day of its period ("שבוע 3") and ticked on its
   first day (`markDay`), a whole book opened at its start, a category's part opened in its first unit's book, marked
-  through its units there, and "הקטגוריה לא נמצאה בספרייה", "סיימת את הקטגוריה".
+  through its units there, and "הקטגוריה לא נמצאה בספרייה", "סיימת את הקטגוריה". Since the daily portion's upgrade (2026-11-27): `shownPlan` takes the plan's `reports` and reckons by `PlanCalendar` (`StudySchedule.kt`): the books a
+  category's plan was given (`chosenBooks`), the range it studies (`planRange`), a pause ("התוכנית מושהית"), an ended
+  plan ("התוכנית הסתיימה") and its history and statistics (`ShownPlan.report`, `history`, `stats`, `startIndex`);
+  `linesOf` opens a unit cut by lines; `markDay` counts from the plan's first day; `newPlan` ends where its content does;
+  `StudyCard` takes `onReport` and `onHistory` (with defaults): beside the box, `ReportChip`s for a day partly done and, unless
+  only the days done are reported, not done, the run of days and the share kept (`statsText`) and "היסטוריה"
+  (`viewedPlan`, the window composed in `Detached`).
 - **Reached from:** the widget registry (`availableHomeWidgets`, generated by `:widgetprocessor` from every `HomeWidget`
   object).
 - **Follows:** Zayit's `ShnayimMikraWidget` (a tick per part of the day, a click that opens it marked, the shown date),
@@ -9693,7 +9721,7 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanEditor.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 660 lines.
+- **Size:** 746 lines.
 - **What:** `StudyPlanEditor`, a plan's editor in a window of its own (`JewelDecoratedDialog`, as `WidgetOptionsDialog`):
   the book or the category studied ("לומדים", request 64 of stage 3), found in one field as the search's bar finds them
   (`SourceField`, in `StudySourceField.kt`: the split of 2026-11-22 for `detekt.yml` and request 74's marking of its
@@ -9710,7 +9738,12 @@ its book or category is found in one field as the search's bar finds them, with 
   or a category's), `rememberPreview`, `EditorWindow`, `BookRows` with `UnitRows` (the unit studied by), `ScheduleRows`
   and `EditorButtons` (split on 2026-11-13, and again on 2026-11-22, to meet `detekt.yml`, whose
   `:SeforimApp:detektJvmMainSourceSet` had not been run on it); `pathOf`, a category's
-  path of titles, internal, serves `StudySourceField.kt` too.
+  path of titles, internal, serves `StudySourceField.kt` too. Since the daily portion's upgrade (2026-11-27): the editor's rows for what a plan holds besides are `StudyPlanSettings.kt`'s, over
+  `PlanExtras` (`StudyPlanExtras.kt`): the name and description, the books of a category chosen from all of its (its base
+  books to begin with, `initialBooks`: choosing a category no longer brings its commentaries), where it ends, a unit of the
+  user's own, how its days are reported, the minute it starts at, and its state. `PlanFields` is `internal`, as are
+  `EditorWindow` (with a title, for the history's), `Choice`, `FormRow` and `Hint`; `rememberPreview` reckons by
+  the plan's calendar, a goal changed after the plan began from today.
 - **Reached from:** `StudyWidget.kt` (`Detached`).
 - **Follows:** Zayit's `WidgetOptionsDialog` (the window, its title bar and bottom bar) and its settings' fields.
 - **Tests:** none of the editor itself; tried in the app (תהילים from פרק כג, five a day, the preview "פרקים כג–כז";
@@ -9759,11 +9792,15 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyPlanStoreTest.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 103 lines.
+- **Size:** 261 lines.
 - **What:** a plan kept with every field, a new one last, changed in place; a day's tick marked and unmarked; a plan
   deleted with its ticks; the weekdays as one number and back. Since request 64 of stage 3: a category's plan keeps its
   category, its base books alone, its unit and its days, and a book's plain plan none; a part of several days ticked on
-  its first day, and unticked with its plan.
+  its first day, and unticked with its plan. Since the daily portion's upgrade (2026-11-27): the store's clock; a day's one report, replaced and taken back; the marks of before read as days done and replaced by
+  a report; the name, description, tracking, end, start minute and books kept, a plain plan keeping no more; a goal
+  changed after the plan began a change from today (the first goal kept), before it the goal it begins with; a pause and
+  its end, a pause of one day leaving no trace; a plan ended and opened again; the start put off once; a plan deleted
+  with all it holds. The goal's edit of the first test is now a change from the day. Run in the Gradle build.
 - **Reached from:** the JVM tests.
 - **Follows:** Zayit's store tests (an in-memory `UserSettingsDb`).
 - **Tests:** it is one (unit).
@@ -9771,12 +9808,165 @@ its book or category is found in one field as the search's bar finds them, with 
 #### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyCardUiTest.kt`
 
 - **Feature:** Daily study plans.
-- **Size:** 131 lines.
+- **Size:** 189 lines.
 - **What:** the card with three plans: the day's parts, the paces and days, one ticked ("סיימת להיום"), one with no
-  study that day; a click on a part opens it, and on the day without study opens where the plan holds.
+  study that day; a click on a part opens it, and on the day without study opens where the plan holds. Since the daily portion's upgrade (2026-11-27): a day reported partly done and not done by their buttons, the run and the share shown, the history opened,
+  and no button for a day not done where only the days done are reported.
 - **Reached from:** the JVM tests.
 - **Follows:** `LearningSplitCardUiTest` (the card drawn with its data, `runDesktopComposeUiTest`).
 - **Tests:** it is one (UI).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyTracking.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 165 lines.
+- **What:** how a plan's days are reported and counted, in plain Kotlin on `java.time` alone (no Compose, no DB, so that it can be
+  taken out of Pardes): `DayReport` (done, partly, not), `TrackingMode` (only the days done, only the days not done, every
+  day: what a day without a report means; switching loses no report), `PlanState`, `GoalChange`, `PausePeriod`,
+  `DayOutcome`, `dayOutcome` (a day's outcome: not counted before the start, in the future, paused, on a day without
+  study, or today without a report), `StudyStats` (each kind of day, the share of the goal kept) and `studyStats` (the runs of
+  days done: rest, pause and today's pending day do not end one, a day partly done, missed or unreported does).
+- **Reached from:** `StudyPlanStore.kt`, `StudyProgress.kt`, `StudyPlanEditor.kt`, `StudyHistory.kt`, `StudyWidget.kt`.
+- **Follows:** Pardes's `StudyParts.kt` (plain functions over data, the logic apart from the widget).
+- **Tests:** `StudyTrackingTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudySchedule.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 142 lines.
+- **What:** the days of a plan and how far into its content each reaches: `PlanCalendar` (the first day, the day it was ended, the
+  goal at the start and its changes, the pauses, the days of study) walks the days once (`days`) with the units that went by
+  before each, every day counted by the goal in force on it, a pause moving the plan on not at all (a part of several days
+  paused at its start is skipped); `unitsBefore`, `partsBefore`; `StudyPlan.calendar`; `planRange` (the units from where a
+  plan starts through where it ends: a plan with no end goes on to the content's end, whole, as before; one that restarts
+  goes round inside its range) and `canPostpone` (the start put off by a day, once, before it has begun).
+- **Reached from:** `StudyWidget.kt` (`shownPlan`), `StudyProgress.kt`, `StudyPlanEditor.kt` (`rememberPreview`), `StudyPlanSettings.kt`.
+- **Follows:** Pardes's `StudyPeriods.kt` (a part of several days from its anchor) and `studyDaysBetween`, which it replaces for the plan's days.
+- **Tests:** `StudyScheduleTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyProgress.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 60 lines.
+- **What:** what a plan's days were: `HistoryDay` (a calendar day, what the user reported, its outcome), `historyOf` (every day from the
+  first through now, a day after the content's end not counted, a part of several days one day of the history, reported on
+  its first and still to come while its period runs) and `statsOf`.
+- **Reached from:** `StudyWidget.kt` (`shownPlan`), `StudyHistory.kt`.
+- **Follows:** `StudyTracking.kt`'s `dayOutcome` and `studyStats`.
+- **Tests:** `StudyScheduleTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyHistory.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 168 lines.
+- **What:** a plan's history in a window of its own (`StudyHistoryWindow`, in `EditorWindow`): the days by outcome, the share of the goal
+  kept, the current run and the best, how far into the content the plan is, and each day, the latest first, with its part,
+  what it was, its goal where the plan's goal changed, and buttons (`ReportChip`) to report it again, done, partly or not, a
+  report pressed again taken back (`historyRows`, `trackingLabel`, `outcomeLabel`).
+- **Reached from:** `StudyWidget.kt` (`Detached`, from the card's "היסטוריה").
+- **Follows:** `StudyPlanEditor.kt`'s window.
+- **Tests:** tried in the app: none yet (see the notes).
+- **Notes:** the Hebrew texts are literals in Kotlin, as in Pardes's other widgets; not run or seen: the build was not available when it was written.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanExtras.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 90 lines.
+- **What:** what the editor sets besides what it did: `PlanExtras` (the name, description, start time, a unit of the user's, the tracking
+  mode, the end, the books chosen), `formatMinute` and `parseMinute` ("06:30"), and `initialBooks` (a category's books before
+  the user changes any: its base books, or all when it has none; a plan of before keeps the books it studied).
+- **Reached from:** `StudyPlanEditor.kt` (`PlanFields.extras`), `StudyPlanSettings.kt`.
+- **Follows:** `PlanFields` (state kept in `mutableStateOf` and `TextFieldState`).
+- **Tests:** `StudyScheduleTest` (the minute and the books).
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyPlanSettings.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 201 lines.
+- **What:** the editor's rows for what a plan holds besides: `NameRows`, `BooksRows` (the books of a category with a box each, "ספרי יסוד",
+  "הכול", "נקה"; the commentaries only when ticked), `EndRow` ("מסיימים ב־", a unit or the content's end), `CustomUnitRows`
+  ("יחידה משלי": so many lines, with a name), `TrackingRows` (the three ways to report, the start time) and `StatusRow`
+  (pause, take up again, end, open again, put the start off by a day: each done at once and closing the editor).
+- **Reached from:** `StudyPlanEditor.kt`.
+- **Follows:** `StudyPlanEditor.kt`'s rows (`FormRow`, `Choice`, `Hint`) and Zayit's `ListComboBox` fields.
+- **Tests:** tried in the app: none yet (see the notes).
+- **Notes:** the Hebrew texts are literals in Kotlin; not run or seen: the build was not available when it was written.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/core/study/StudyTrackingTest.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 118 lines.
+- **What:** a day's outcome in each of the three tracking modes, a day partly done, the days not counted, switching the mode losing no
+  report, the statistics and the runs, a pause's period, the codes read.
+- **Reached from:** the JVM tests.
+- **Follows:** `StudyPartsTest`.
+- **Tests:** it is one (unit).
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/home/widgets/study/StudyScheduleTest.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 307 lines.
+- **What:** a goal changed from a day leaving the days before as they were; a pause; a plan ended; the start put off, once, and its
+  weekdays unchanged; a plan stopping at the end of its content and not going on to another; a range that restarts; a part of
+  several days; the history by mode and its statistics; days not counted; the start minute; units of the user's; a plan
+  with no change reckoned as before (`dayPart`); the start time read; a category's books before the user changes any.
+- **Reached from:** the JVM tests.
+- **Follows:** `StudyPartsTest`.
+- **Tests:** it is one (unit).
+
+### The Home's acrylic background
+
+The user's request (2026-11-27, with the daily portion's upgrade): an option in the Home's background settings, besides the
+wallpaper image, for an acrylic with no image at all: a translucent surface with a soft blur, its opacity and blur to
+choose, the text's readability kept, and the wallpaper as it was. Hooks: `HomeView.kt`, `DisplaySettingsScreen.kt`,
+`AppSettings.kt`, `strings.xml`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeBackgroundSettings.kt`
+
+- **Feature:** The Home's acrylic background.
+- **Size:** 40 lines.
+- **What:** `HomeBackgroundSettings`, a `SettingsGroup` (`home_background`): `acrylic` (off), `acrylicOpacity` and `acrylicBlur`, one setting
+  for every window; the opacities and the blurs to choose from (`ACRYLIC_OPACITIES`, `ACRYLIC_BLURS`), `readableOpacity` (not
+  below 0.3, so that the text stays readable) and `usableBlur` for a value hand-edited or of a later version, and `nearestIndex`
+  for a combo box shown a value it does not offer.
+- **Reached from:** `HomeBackgroundCard.kt`, `HomeView.kt`, `AppSettings.kt` (the portable keys).
+- **Follows:** `HomeLogoSettings.kt`.
+- **Tests:** `HomeBackgroundSettingsTest`.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeBackgroundCard.kt`
+
+- **Feature:** The Home's acrylic background.
+- **Size:** 109 lines.
+- **What:** Settings › תצוגה: the Home's background, "תמונת רקע" or "רקע אקרילי", and, with the acrylic, its opacity and its blur, each a
+  combo box in a card as `AntiAliasingCard`'s.
+- **Reached from:** `DisplaySettingsScreen.kt`.
+- **Follows:** `HomeLogoCard.kt` and `DisplaySettingsScreen.kt`'s `AntiAliasingCard`.
+- **Tests:** tried in the app: none yet (see the notes).
+- **Notes:** the texts are `strings.xml`'s (`settings_home_background*`); not run or seen: the build was not available when it was written.
+
+#### `SeforimApp/src/jvmMain/kotlin/io/github/kdroidfilter/seforimapp/features/bookcontent/ui/panels/bookcontent/views/HomeAcrylic.kt`
+
+- **Feature:** The Home's acrylic background.
+- **Size:** 73 lines.
+- **What:** `AcrylicBackground`: no image at all. The window has nothing of its own behind it to blur, so the acrylic is made of what
+  an acrylic is: the accent's light in two soft spots, blurred (`Modifier.blur`, none at 0), under the panel's own colour at
+  the opacity chosen, with a faint grain (`grainTile`, a tile of light and dark specks, always the same). The surface is the
+  panel's colour, so the text over it keeps the contrast the panel gives it.
+- **Reached from:** `HomeView.kt`.
+- **Follows:** `HomeView.kt`'s wallpaper layers.
+- **Tests:** tried in the app: none yet (see the notes).
+- **Notes:** not run or seen: the build was not available when it was written; whether the effect reads well in every size and theme is still to be looked at.
+
+#### `SeforimApp/src/jvmTest/kotlin/io/github/kdroidfilter/seforimapp/features/settings/display/HomeBackgroundSettingsTest.kt`
+
+- **Feature:** Daily study plans (the daily portion's upgrade).
+- **Size:** 83 lines.
+- **What:** the wallpaper the background until the acrylic is chosen; the three settings and the wallpaper's switch kept after a restart;
+  observed, and portable with the other preferences; reset with the group; an opacity or a blur that cannot be used brought to
+  one that can; the combo box's nearest value.
+- **Reached from:** the JVM tests.
+- **Follows:** `SettingTest`.
+- **Tests:** it is one (unit).
 
 ### One marking in every popup
 
