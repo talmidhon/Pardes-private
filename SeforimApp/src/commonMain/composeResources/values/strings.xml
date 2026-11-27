@@ -782,6 +782,13 @@
     <!-- Pardes: the Home's big name shown or hidden (request 67 of stage 3) -->
     <string name="settings_show_home_logo">הצג את הכיתוב הגדול של פרדס בדף הבית</string>
     <string name="settings_show_home_logo_description">כאשר אפשרות זו מופעלת, הכיתוב הגדול של פרדס מוצג מעל שורת החיפוש בדף הבית. כשהיא כבויה, שורת החיפוש עולה למעלה.</string>
+    <!-- Pardes (the daily portion's upgrade, part B): the Home's background, the wallpaper image or an acrylic -->
+    <string name="settings_home_background">רקע דף הבית</string>
+    <string name="settings_home_background_description">תמונת רקע היא התמונה שהייתה עד עכשיו. רקע אקרילי הוא משטח שקוף ומטושטש בעדינות, בלי שום תמונה.</string>
+    <string name="settings_home_background_image">תמונת רקע</string>
+    <string name="settings_home_background_acrylic">רקע אקרילי</string>
+    <string name="settings_home_background_acrylic_opacity">אטימות</string>
+    <string name="settings_home_background_acrylic_blur">עוצמת הטשטוש</string>
     <string name="settings_compact_mode">מצב קומפקטי לסרגל הצדדי</string>
     <string name="settings_compact_mode_description">כאשר אפשרות זו מופעלת, הסרגלים הצדדיים יוצגו בצורה צפופה יותר: האייקונים יהיו קטנים יותר והטקסט שמתחת לאייקונים לא יוצג.</string>
     <string name="settings_max_commentators_per_page">מספר מרבי של מפרשים בעמוד</string>

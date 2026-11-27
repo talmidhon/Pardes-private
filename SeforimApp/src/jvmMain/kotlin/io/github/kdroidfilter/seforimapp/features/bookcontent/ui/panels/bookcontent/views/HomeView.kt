@@ -105,7 +105,10 @@ import io.github.kdroidfilter.seforimapp.features.search.domain.CategoryHit
 import io.github.kdroidfilter.seforimapp.features.search.domain.ScopeItem
 import io.github.kdroidfilter.seforimapp.features.search.domain.reference.ResolvedReference
 import io.github.kdroidfilter.seforimapp.features.search.domain.searchKey
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeBackgroundSettings
 import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoSettings
+import io.github.kdroidfilter.seforimapp.features.settings.display.readableOpacity
+import io.github.kdroidfilter.seforimapp.features.settings.display.usableBlur
 import io.github.kdroidfilter.seforimapp.framework.desktop.LocalOpenWindow
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.search.LuceneLookupSearchService.AuthorHit
@@ -319,9 +322,15 @@ fun HomeView(
 
     val panelBackground = JewelTheme.globalColors.panelBackground
     val showWallpaper by appSettings.showHomeWallpaperFlow.collectAsState()
+    // Pardes (the daily portion's upgrade, part B): an acrylic instead, with no image: not drawn, not even decoded
+    val acrylic by appSettings.flow(HomeBackgroundSettings.acrylic).collectAsState()
+    val acrylicOpacity by appSettings.flow(HomeBackgroundSettings.acrylicOpacity).collectAsState()
+    val acrylicBlur by appSettings.flow(HomeBackgroundSettings.acrylicBlur).collectAsState()
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        if (showWallpaper) {
+        if (acrylic) {
+            AcrylicBackground(opacity = readableOpacity(acrylicOpacity), blur = usableBlur(acrylicBlur))
+        } else if (showWallpaper) {
             val isDark = JewelTheme.isDark
             val widthPx = with(LocalDensity.current) { maxWidth.toPx() }.roundToInt()
             val wallpaper =

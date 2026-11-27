@@ -37,6 +37,8 @@ import io.github.kdroidfilter.seforimapp.features.bookcontent.ui.panels.bookcont
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsEvents
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsState
 import io.github.kdroidfilter.seforimapp.features.settings.display.DisplaySettingsViewModel
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeBackgroundCard
+import io.github.kdroidfilter.seforimapp.features.settings.display.HomeBackgroundSettings
 import io.github.kdroidfilter.seforimapp.features.settings.display.HomeLogoCard
 import io.github.kdroidfilter.seforimapp.framework.di.LocalAppGraph
 import io.github.kdroidfilter.seforimapp.framework.platform.PlatformInfo
@@ -102,12 +104,18 @@ private fun DisplaySettingsView(
                 onAccentChange = onAccentColorChange,
             )
 
-            SettingCard(
-                title = Res.string.settings_show_home_wallpaper,
-                description = Res.string.settings_show_home_wallpaper_description,
-                checked = state.showHomeWallpaper,
-                onCheckedChange = { onEvent(DisplaySettingsEvents.SetShowHomeWallpaper(it)) },
-            )
+            // Pardes (the daily portion's upgrade, part B): the wallpaper image or an acrylic with none; the image's own switch
+            // means something only while the image is the background
+            HomeBackgroundCard()
+            val acrylic by LocalAppGraph.current.appSettings.flow(HomeBackgroundSettings.acrylic).collectAsState()
+            if (!acrylic) {
+                SettingCard(
+                    title = Res.string.settings_show_home_wallpaper,
+                    description = Res.string.settings_show_home_wallpaper_description,
+                    checked = state.showHomeWallpaper,
+                    onCheckedChange = { onEvent(DisplaySettingsEvents.SetShowHomeWallpaper(it)) },
+                )
+            }
             // Pardes: the Home's big name shown or hidden (request 67 of stage 3)
             HomeLogoCard()
 

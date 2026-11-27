@@ -92,3 +92,42 @@ internal fun bookUnitNames(levels: List<StudyLevel>): List<UnitName> =
 private const val DAF = StudyPlan.DAF_UNIT
 private const val BOOK = StudyPlan.BOOK_UNIT
 private const val AMUD = "עמוד"
+
+/**
+ * Pardes (the daily portion's upgrade): a unit the user defines for a book whose contents have no division to learn by,
+ * or not the one wanted: [lines] lines of the book, called [name] ("חצי עמוד"). A plan keeps it as its unit's name
+ * ([unitNameOf]), which no contents' heading can be.
+ */
+internal data class ChunkUnit(
+    val lines: Int,
+    val name: String,
+) {
+    /** What a plan keeps as its unit's name: "#20#חצי עמוד". */
+    val key: String get() = "$CHUNK_MARK$lines$CHUNK_MARK$name"
+}
+
+/** The unit a plan's [unitName] says the user defined, null for a unit of the book's contents. */
+internal fun chunkOf(unitName: String): ChunkUnit? {
+    if (!unitName.startsWith(CHUNK_MARK)) return null
+    val lines = unitName.drop(1).substringBefore(CHUNK_MARK).toIntOrNull()?.takeIf { it > 0 } ?: return null
+    return ChunkUnit(lines, unitName.drop(1).substringAfter(CHUNK_MARK).ifBlank { CHUNK_NAME })
+}
+
+/** [chunk]'s units in a book of [totalLines] lines, each a run of its lines, the last the rest: "חצי עמוד 12". */
+internal fun chunkUnits(
+    totalLines: Int,
+    chunk: ChunkUnit,
+): List<StudyUnit> =
+    (0 until totalLines step chunk.lines).mapIndexed { at, first ->
+        StudyUnit(
+            tocId = -(at + 1L),
+            level = 0,
+            headings = listOf("${chunk.name} ${at + 1}"),
+            lineId = null,
+            firstLine = first,
+            lastLine = minOf(first + chunk.lines, totalLines) - 1,
+        )
+    }
+
+private const val CHUNK_MARK = "#"
+private const val CHUNK_NAME = "יחידה"

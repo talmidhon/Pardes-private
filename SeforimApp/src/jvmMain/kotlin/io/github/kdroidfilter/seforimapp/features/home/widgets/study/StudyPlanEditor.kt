@@ -50,6 +50,8 @@ import dev.nucleusframework.window.newFullscreenControls
 import io.github.kdroidfilter.kosherkotlin.hebrewcalendar.JewishCalendar
 import io.github.kdroidfilter.seforimapp.core.coroutines.runSuspendCatching
 import io.github.kdroidfilter.seforimapp.core.presentation.theme.ThemeUtils
+import io.github.kdroidfilter.seforimapp.core.study.GoalChange
+import io.github.kdroidfilter.seforimapp.core.study.PlanBookRef
 import io.github.kdroidfilter.seforimapp.core.study.StudyPlan
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HomeWidgetsState
 import io.github.kdroidfilter.seforimapp.features.home.widgets.HoverBox
@@ -80,6 +82,7 @@ import seforimapp.seforimapp.generated.resources.Res
 import seforimapp.seforimapp.generated.resources.scope_base_books_label
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 // Pardes's own: the editor of a study plan (request 19 of docs/DESKTOP_STAGE2.md), as the approved mock-up has it —
 // the book, the depth of its table of contents studied by, where to start, how many a day, from which date, on which
@@ -117,9 +120,26 @@ internal fun StudyPlanEditor(
     val entries by produceState<List<TocEntry>>(emptyList(), fields.book) {
         value = fields.book?.let { runSuspendCatching { repository.getTocEntriesForBook(it.id) }.getOrNull() }.orEmpty()
     }
-    // Pardes: a category's books with their contents (request 64 of stage 3)
-    val books by produceState<List<PlanBook>>(emptyList(), fields.category, fields.baseBooksOnly) {
-        value = fields.category?.let { runSuspendCatching { repository.planBooks(it, fields.baseBooksOnly) }.getOrNull() }.orEmpty()
+    // Pardes: all the books of a category (request 64 of stage 3; the daily portion's upgrade: the user chooses among them)
+    val allBooks by produceState<List<Book>>(emptyList(), fields.category) {
+        value = fields.category?.let { runSuspendCatching { repository.booksInTreeOrder(it) }.getOrNull() }.orEmpty()
+    }
+    // Before the user changes any: a plan's own books, or the category's base books; the commentaries only when ticked
+    LaunchedEffect(allBooks, fields.extras.chosen == null) {
+        if (fields.extras.chosen == null && allBooks.isNotEmpty()) {
+            fields.extras.chosen = initialBooks(allBooks, plan.books, legacy = plan.id != 0L, baseBooksOnly = plan.baseBooksOnly)
+        }
+    }
+    // The contents of the books chosen, each read once
+    val contents = remember { HashMap<Long, List<TocEntry>>() }
+    val books by produceState<List<PlanBook>>(emptyList(), allBooks, fields.extras.chosen) {
+        val chosen = fields.extras.chosen ?: return@produceState
+        value =
+            runSuspendCatching {
+                allBooks.filter { it.id in chosen }.map { book ->
+                    PlanBook(book.id, book.title, contents.getOrPut(book.id) { repository.getTocEntriesForBook(book.id) })
+                }
+            }.getOrNull().orEmpty()
     }
     val levels = remember(entries) { studyLevels(entries) }
     // A book whose depths do not have the one chosen: its first
@@ -131,7 +151,7 @@ internal fun StudyPlanEditor(
             fields.units(books, shownName, entries, shownLevel)
         }
     val startIndex = remember(units, fields.start) { startIndexOf(units, fields.start) }
-    val preview = rememberPreview(fields, units, startIndex, inIsrael)
+    val preview = rememberPreview(fields, plan, units, inIsrael)
 
     fun save() {
         val unit = units.getOrNull(startIndex) ?: return
@@ -140,10 +160,12 @@ internal fun StudyPlanEditor(
         scope.launch {
             if (fields.byCategory && category != null && shownName != null) {
                 val path = runSuspendCatching { repository.pathOf(category.id) }.getOrNull().orEmpty()
-                store.save(fields.planOf(plan, category, path, shownName.one, unit.headings))
-            } else if (chosen != null && shownLevel != null) {
+                val picked = fields.extras.chosen.orEmpty()
+                val refs = allBooks.filter { it.id in picked }.map { PlanBookRef(it.id, it.title) }
+                store.save(fields.planOf(plan, category, path, shownName.one, unit.headings, refs))
+            } else if (chosen != null && (shownLevel != null || fields.extras.custom)) {
                 val path = runSuspendCatching { repository.categoryPathOf(chosen) }.getOrNull().orEmpty()
-                store.save(fields.planFrom(plan, chosen, path, shownLevel.level, unit.headings))
+                store.save(fields.planFrom(plan, chosen, path, shownLevel?.level ?: 0, unit.headings))
             } else {
                 return@launch
             }
@@ -156,9 +178,14 @@ internal fun StudyPlanEditor(
             Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            NameRows(fields.extras)
             BookRows(fields, levels, shownLevel, units, startIndex, names = names, shownName = shownName)
+            if (fields.byCategory) BooksRows(fields.extras, allBooks)
+            EndRow(fields.extras, units, startIndex)
             ScheduleRows(fields, inIsrael)
-            preview?.let { part -> PreviewBox(part, units, fields.periodDays) }
+            TrackingRows(fields.extras)
+            preview?.let { (part, range) -> PreviewBox(part, range, fields.periodDays) }
+            if (plan.id != 0L) StatusRow(plan, inIsrael, onClose)
         }
         Spacer(Modifier.height(8.dp))
         Divider(orientation = Orientation.Horizontal)
@@ -180,7 +207,7 @@ internal fun StudyPlanEditor(
 
 /** The editor's fields as the user sets them, from [plan]'s; the book is read when the editor opens. */
 @Stable
-private class PlanFields(
+internal class PlanFields(
     plan: StudyPlan,
 ) {
     var book by mutableStateOf<Book?>(null)
@@ -200,18 +227,24 @@ private class PlanFields(
     var weekdays by mutableStateOf(plan.weekdays)
     var restart by mutableStateOf(plan.restart)
 
+    // Pardes (the daily portion's upgrade): the name, the books chosen, the end, how days are reported, a unit of the user's
+    val extras = PlanExtras(plan)
+
     /** Another book, or another depth: the start goes back to its first unit. */
     fun pickBook(picked: Book) {
         book = picked
         byCategory = false
         unitName = ""
         start = emptyList()
+        extras.end = emptyList()
     }
 
     fun pickLevel(picked: Int) {
         level = picked
         unitName = ""
         start = emptyList()
+        extras.custom = false
+        extras.end = emptyList()
     }
 
     /** A whole category, or its base books alone ([only]), found as a book is: the start goes back to its first unit. */
@@ -224,6 +257,9 @@ private class PlanFields(
         byCategory = true
         unitName = ""
         start = emptyList()
+        // Its books are read again and chosen as a category's are: its base books, not its commentaries
+        extras.chosen = null
+        extras.end = emptyList()
     }
 
     /** A unit by its name: a category's, or a book's daf. */
@@ -271,7 +307,13 @@ private class PlanFields(
         if (byCategory) {
             shownName?.let { categoryUnits(books, it.one) }.orEmpty()
         } else {
-            shownLevel?.let { bookUnits(entries, it.level, unitName) }.orEmpty()
+            // A unit of the user's: so many lines of the book, whatever its contents
+            val chunk = chunkOf(unitName)
+            if (chunk != null) {
+                book?.let { chunkUnits(it.totalLines, chunk) }.orEmpty()
+            } else {
+                shownLevel?.let { bookUnits(entries, it.level, unitName) }.orEmpty()
+            }
         }
 
     /** Whether the plan can be saved: its category or its book chosen, with [units] to study. */
@@ -296,92 +338,130 @@ private class PlanFields(
         level: Int,
         start: List<String>,
     ): StudyPlan =
-        plan.copy(
-            bookId = chosen.id,
-            bookTitle = chosen.title,
-            categoryPath = path,
-            level = level,
-            start = start,
-            perDay = perDay,
-            startDay = startDay,
-            weekdays = weekdays,
-            restart = restart,
-            category = 0,
-            baseBooksOnly = false,
-            unitName = unitName,
-            periodDays = periodDays,
+        extras.applyTo(
+            plan.copy(
+                bookId = chosen.id,
+                bookTitle = chosen.title,
+                categoryPath = path,
+                level = level,
+                start = start,
+                perDay = perDay,
+                startDay = startDay,
+                weekdays = weekdays,
+                restart = restart,
+                category = 0,
+                baseBooksOnly = false,
+                unitName = unitName,
+                periodDays = periodDays,
+            ),
+            emptyList(),
         )
 
-    /** [plan] with these fields: the category [chosen], its [path] its own, studied by the unit [unit] from [start]. */
+    /**
+     * [plan] with these fields: the category [chosen], its [path] its own, studied by the unit [unit] from [start], in the
+     * [books] the user chose (its base books alone no longer means anything once they are kept).
+     */
     fun planOf(
         plan: StudyPlan,
         chosen: Category,
         path: List<String>,
         unit: String,
         start: List<String>,
+        books: List<PlanBookRef>,
     ): StudyPlan =
-        plan.copy(
-            bookId = 0,
-            bookTitle = chosen.title,
-            categoryPath = path,
-            level = 0,
-            start = start,
-            perDay = perDay,
-            startDay = startDay,
-            weekdays = weekdays,
-            restart = restart,
-            category = chosen.id,
-            baseBooksOnly = baseBooksOnly,
-            unitName = unit,
-            periodDays = periodDays,
+        extras.applyTo(
+            plan.copy(
+                bookId = 0,
+                bookTitle = chosen.title,
+                categoryPath = path,
+                level = 0,
+                start = start,
+                perDay = perDay,
+                startDay = startDay,
+                weekdays = weekdays,
+                restart = restart,
+                category = chosen.id,
+                baseBooksOnly = books.isEmpty() && baseBooksOnly,
+                unitName = unit,
+                periodDays = periodDays,
+            ),
+            books,
         )
 }
 
-/** The day's part the fields give today, as the card will show it; null while the book has no units. */
+/**
+ * The day's part the fields give today, as the card will show it, with the units it is of (cut to where the plan starts and
+ * ends); null while the book has no units. A goal changed once the plan has begun holds from today, as the store keeps it.
+ */
 @Composable
 private fun rememberPreview(
     fields: PlanFields,
+    plan: StudyPlan,
     units: List<StudyUnit>,
-    startIndex: Int,
     inIsrael: Boolean,
-): DayPart? {
-    val today = LocalDate.now()
-    return remember(units, startIndex, fields.perDay, fields.startDay, fields.weekdays, fields.restart, fields.periodDays, inIsrael) {
+): Pair<DayPart, List<StudyUnit>>? {
+    val now = LocalDateTime.now()
+    return remember(
+        units,
+        plan,
+        fields.start,
+        fields.extras.end,
+        fields.perDay,
+        fields.startDay,
+        fields.weekdays,
+        fields.restart,
+        fields.periodDays,
+        inIsrael,
+    ) {
         if (units.isEmpty()) {
             null
         } else {
-            val before = today < fields.startDay
-            // Pardes: a part for several days, of its period (request 64 of stage 3)
-            val daily = fields.periodDays <= 1
-            dayPart(
-                startIndex = startIndex,
-                count = units.size,
-                perDay = fields.perDay,
-                restart = fields.restart,
-                daysBefore =
-                    when {
-                        before -> 0
-                        daily -> studyDaysBetween(fields.startDay, today) { isStudyDay(it, fields.weekdays, inIsrael) }
-                        else -> periodIndex(fields.startDay, today, fields.periodDays)
-                    },
-                studyDay = !daily || isStudyDay(today, fields.weekdays, inIsrael),
-                beforeStart = before,
-            )
+            val (range, from) = planRange(units, fields.start, fields.extras.end)
+            val today = now.toLocalDate()
+            val began = plan.id != 0L && today >= plan.firstDay
+            val draft =
+                plan.copy(
+                    startDay = fields.startDay,
+                    weekdays = fields.weekdays,
+                    restart = fields.restart,
+                    periodDays = fields.periodDays,
+                    perDay = fields.perDay,
+                    startGoal = if (began) plan.startGoal else fields.perDay,
+                    goalChanges =
+                        plan.goalChanges + listOfNotNull(GoalChange(today, fields.perDay).takeIf { began && fields.perDay != plan.perDay }),
+                )
+            val calendar = draft.calendar(inIsrael)
+            val row = calendar.days(today).lastOrNull()
+            val before = today < calendar.firstDay || today == calendar.firstDay && !calendar.startedBy(now)
+            val part =
+                dayPartFrom(
+                    startIndex = from,
+                    count = range.size,
+                    perDay = calendar.goalOn(today),
+                    restart = fields.restart,
+                    unitsBefore = row?.unitsBefore ?: 0L,
+                    day = (row?.partsBefore ?: 0) + 1,
+                    studyDay = row?.studyDay == true,
+                    beforeStart = before,
+                    paused = row?.paused == true,
+                )
+            part to range
         }
     }
 }
 
-/** The editor's window: its title bar, and [content] in a column over the panel's background. */
+/** The editor's window, with its [title] (the history's too): its title bar, and [content] in a column over the panel's background. */
 @Composable
-private fun EditorWindow(
+internal fun EditorWindow(
     onClose: () -> Unit,
+    title: String = "תוכנית לימוד",
     content: @Composable ColumnScope.() -> Unit,
 ) {
     with(LocalNucleusApplicationScope.current) {
         IntUiTheme(theme = ThemeUtils.buildThemeDefinition(), styling = ThemeUtils.buildComponentStyling()) {
             JewelDecoratedDialog(
                 onCloseRequest = onClose,
-                title = "תוכנית לימוד",
+                title = title,
                 state = rememberDialogState(position = WindowPosition.Aligned(Alignment.Center), size = DpSize(600.dp, 680.dp)),
                 visible = true,
                 resizable = true,
@@ -391,7 +471,7 @@ private fun EditorWindow(
                     gradientStartColor = ThemeUtils.titleBarGradientColor(),
                     controlButtonsDirection = ControlButtonsDirection.SystemNative,
                 ) {
-                    Text("תוכנית לימוד")
+                    Text(title)
                 }
                 Column(
                     Modifier
@@ -476,32 +556,37 @@ private fun UnitRows(
             }
         }
     }
-    if (!fields.byCategory && fields.book != null && levels.isEmpty()) {
-        Hint("לספר הזה אין תוכן עניינים לחלק לפיו.")
+    if (!fields.byCategory && fields.book != null && levels.isEmpty() && !fields.extras.custom) {
+        Hint("לספר הזה אין תוכן עניינים לחלק לפיו. אפשר להגדיר יחידה משלך.")
     }
-    if (!fields.byCategory && levels.isNotEmpty()) {
+    if (!fields.byCategory && (levels.isNotEmpty() || fields.book != null)) {
         FormRow("לומדים לפי") {
             Column {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     levels.forEach { option ->
-                        Choice(option.name.one, chosen = fields.unitName.isEmpty() && option.level == shownLevel?.level) {
-                            fields.pickLevel(option.level)
-                        }
+                        val chosen = !fields.extras.custom && fields.unitName.isEmpty() && option.level == shownLevel?.level
+                        Choice(option.name.one, chosen = chosen) { fields.pickLevel(option.level) }
                     }
                     // Pardes: a daf, two amudim, where the book goes by amud (request 64 of stage 3)
                     names.drop(levels.size).forEach { option ->
-                        Choice(option.one, chosen = fields.unitName == option.one) { fields.pickUnit(option.one) }
+                        Choice(option.one, chosen = !fields.extras.custom && fields.unitName == option.one) {
+                            fields.extras.custom = false
+                            fields.pickUnit(option.one)
+                        }
                     }
+                    // Pardes: a unit of the user's own, for a book with no division or not the one wanted
+                    Choice("יחידה משלי", chosen = fields.extras.custom) { fields.extras.custom = true }
                 }
                 Hint("הרמות שבתוכן העניינים של הספר")
             }
         }
+        CustomUnitRows(fields)
     }
 }
 
 /** One of a row's choices: full while chosen, outlined otherwise, as the depths' buttons are. */
 @Composable
-private fun Choice(
+internal fun Choice(
     text: String,
     chosen: Boolean,
     onClick: () -> Unit,
@@ -589,7 +674,7 @@ private val WEEK = listOf(DayOfWeek.SUNDAY) + DayOfWeek.entries.filter { it != D
 
 /** A field of the form: its [label] beside it. */
 @Composable
-private fun FormRow(
+internal fun FormRow(
     label: String,
     content: @Composable () -> Unit,
 ) {
@@ -600,7 +685,7 @@ private fun FormRow(
 }
 
 @Composable
-private fun Hint(text: String) {
+internal fun Hint(text: String) {
     Text(text, fontSize = 12.sp, color = JewelTheme.globalColors.text.info, modifier = Modifier.padding(top = 4.dp))
 }
 
@@ -637,6 +722,7 @@ private fun PreviewBox(
         when (part) {
             is DayPart.Part -> partLabel(part.indexes.map { units[it] })
             DayPart.Rest -> "אין לימוד היום"
+            DayPart.Paused -> "התוכנית מושהית"
             DayPart.NotYet -> "התוכנית עוד לא התחילה"
             DayPart.Finished -> "התוכנית הגיעה לסופה"
         }

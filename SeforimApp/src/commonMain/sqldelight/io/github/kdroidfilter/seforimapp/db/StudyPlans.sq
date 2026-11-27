@@ -48,6 +48,7 @@ DELETE FROM study_plan WHERE id = :id;
 deleteDoneOf:
 DELETE FROM study_plan_done WHERE planId = :planId;
 
+-- The marks of before the reports: read as days done, never written again, taken back when the day is reported.
 markDone:
 INSERT OR REPLACE INTO study_plan_done(planId, day) VALUES (:planId, :day);
 
@@ -56,6 +57,9 @@ DELETE FROM study_plan_done WHERE planId = :planId AND day = :day;
 
 selectDoneOn:
 SELECT planId FROM study_plan_done WHERE day = :day;
+
+selectDoneOf:
+SELECT day FROM study_plan_done WHERE planId = :planId;
 
 -- Pardes: what a plan holds besides (request 64 of the list after the third testers' build: "תמיכה גם לימוד קטגוריה,
 -- קצב לפי כמה סוגי הרמות חלוקה והספק שלא תלוי רק ביום אחד אלא בכמה ימים/ שבוע"), in a table of its own, which
@@ -82,5 +86,115 @@ VALUES (:planId, :categoryId, :baseBooksOnly, :unitName, :periodDays);
 deleteMore:
 DELETE FROM study_plan_more WHERE planId = :planId;
 
-isDone:
-SELECT COUNT(*) FROM study_plan_done WHERE planId = :planId AND day = :day;
+selectOne:
+SELECT * FROM study_plan WHERE id = :id;
+
+-- Pardes (the daily portion's upgrade): what a plan holds besides, again in tables of their own, which CREATE TABLE IF NOT
+-- EXISTS makes in a user DB of before, a plan without a row being as it was: a book or a category by its start alone,
+-- a part a day, its days marked "סיימתי" ticked only.
+-- A plan's name and description, the day the user ended it (-1 while it goes on), how its days are reported (0 only the
+-- days reached, 1 only the days not reached, 2 every day), the headings of the last unit it studies (as startPath's: ""
+-- to the content's end), the minute of the day it starts on its first day, and the days its start was put off (0 or 1).
+CREATE TABLE IF NOT EXISTS study_plan_meta (
+    planId INTEGER PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    finishedDay INTEGER NOT NULL DEFAULT -1,
+    tracking INTEGER NOT NULL DEFAULT 0,
+    endPath TEXT NOT NULL,
+    startMinute INTEGER NOT NULL DEFAULT 0,
+    postponedDays INTEGER NOT NULL DEFAULT 0
+);
+
+-- The goals a plan had after the first (study_plan.perDay): from which day each holds, so that a change leaves the days
+-- before it as they were.
+CREATE TABLE IF NOT EXISTS study_plan_goal (
+    planId INTEGER NOT NULL,
+    fromDay INTEGER NOT NULL,
+    perDay INTEGER NOT NULL,
+    PRIMARY KEY (planId, fromDay)
+);
+
+-- The days a plan was paused, from fromDay up to untilDay left out (NULL: still).
+CREATE TABLE IF NOT EXISTS study_plan_pause (
+    planId INTEGER NOT NULL,
+    fromDay INTEGER NOT NULL,
+    untilDay INTEGER,
+    PRIMARY KEY (planId, fromDay)
+);
+
+-- What the user reported for a day (1 reached, 2 partly, 3 not); a plan's day has one report, whatever is reported again.
+CREATE TABLE IF NOT EXISTS study_plan_report (
+    planId INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    status INTEGER NOT NULL,
+    PRIMARY KEY (planId, day)
+);
+
+-- The books a category's plan studies, as the user chose them, in the book tree's order: by id and by title, as
+-- study_plan keeps its book. A plan without any is a category's, by study_plan_more.baseBooksOnly, as it was.
+CREATE TABLE IF NOT EXISTS study_plan_book (
+    planId INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    bookId INTEGER NOT NULL,
+    bookTitle TEXT NOT NULL,
+    PRIMARY KEY (planId, position)
+);
+
+selectMeta:
+SELECT * FROM study_plan_meta;
+
+saveMeta:
+INSERT OR REPLACE INTO study_plan_meta(planId, name, description, finishedDay, tracking, endPath, startMinute, postponedDays)
+VALUES (:planId, :name, :description, :finishedDay, :tracking, :endPath, :startMinute, :postponedDays);
+
+deleteMeta:
+DELETE FROM study_plan_meta WHERE planId = :planId;
+
+selectGoals:
+SELECT * FROM study_plan_goal ORDER BY planId, fromDay;
+
+saveGoal:
+INSERT OR REPLACE INTO study_plan_goal(planId, fromDay, perDay) VALUES (:planId, :fromDay, :perDay);
+
+deleteGoalsOf:
+DELETE FROM study_plan_goal WHERE planId = :planId;
+
+selectPauses:
+SELECT * FROM study_plan_pause ORDER BY planId, fromDay;
+
+openPause:
+INSERT OR IGNORE INTO study_plan_pause(planId, fromDay, untilDay) VALUES (:planId, :fromDay, NULL);
+
+closePause:
+UPDATE study_plan_pause SET untilDay = :untilDay WHERE planId = :planId AND untilDay IS NULL;
+
+deletePause:
+DELETE FROM study_plan_pause WHERE planId = :planId AND fromDay = :fromDay;
+
+deletePausesOf:
+DELETE FROM study_plan_pause WHERE planId = :planId;
+
+selectReportsOf:
+SELECT day, status FROM study_plan_report WHERE planId = :planId;
+
+selectReportsOn:
+SELECT planId, status FROM study_plan_report WHERE day = :day;
+
+saveReport:
+INSERT OR REPLACE INTO study_plan_report(planId, day, status) VALUES (:planId, :day, :status);
+
+deleteReport:
+DELETE FROM study_plan_report WHERE planId = :planId AND day = :day;
+
+deleteReportsOf:
+DELETE FROM study_plan_report WHERE planId = :planId;
+
+selectBooks:
+SELECT * FROM study_plan_book ORDER BY planId, position;
+
+saveBook:
+INSERT OR REPLACE INTO study_plan_book(planId, position, bookId, bookTitle) VALUES (:planId, :position, :bookId, :bookTitle);
+
+deleteBooksOf:
+DELETE FROM study_plan_book WHERE planId = :planId;

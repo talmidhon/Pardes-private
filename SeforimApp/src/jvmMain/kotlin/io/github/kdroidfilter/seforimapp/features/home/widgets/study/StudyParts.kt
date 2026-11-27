@@ -14,7 +14,8 @@ import java.time.LocalDate
 /**
  * An entry of a book's table of contents studied as one unit: its [headings] from the book's top level down, the line
  * it starts on, and the line the next unit (or a heading above it) starts on, null at the book's end; in a category's
- * plan, its book ([bookId], its title first among the headings).
+ * plan, its book ([bookId], its title first among the headings). A unit the user cut by lines ([chunkUnits]) has no
+ * contents entry: it is known by the indexes of its [firstLine] and its [lastLine] in the book.
  */
 @Immutable
 internal data class StudyUnit(
@@ -24,6 +25,8 @@ internal data class StudyUnit(
     val lineId: Long?,
     val nextLineId: Long? = null,
     val bookId: Long = 0,
+    val firstLine: Int? = null,
+    val lastLine: Int? = null,
 )
 
 /** What a depth of a table of contents is called: one unit ([one], "פרק") and several ([many], "פרקים"). */
@@ -202,6 +205,9 @@ internal sealed interface DayPart {
     /** Not a day of study: a weekday the plan skips, or Yom Tov while it skips Shabbat. */
     data object Rest : DayPart
 
+    /** The user paused the plan that day. */
+    data object Paused : DayPart
+
     /** Before the plan's first day. */
     data object NotYet : DayPart
 
@@ -221,11 +227,40 @@ internal fun dayPart(
     daysBefore: Int,
     studyDay: Boolean,
     beforeStart: Boolean = false,
+): DayPart =
+    dayPartFrom(
+        startIndex = startIndex,
+        count = count,
+        perDay = perDay,
+        restart = restart,
+        unitsBefore = daysBefore.toLong() * perDay.coerceAtLeast(1),
+        day = daysBefore + 1,
+        studyDay = studyDay,
+        beforeStart = beforeStart,
+    )
+
+/**
+ * Pardes (the daily portion's upgrade): the part of a day of a plan of [count] units starting at [startIndex], [perDay]
+ * units, after [unitsBefore] units went by before it (each day by the goal it had, [PlanCalendar]'s), the plan's [day]th
+ * part. [paused] is a day the user paused the plan.
+ */
+@Suppress("LongParameterList") // the plan's reckoning and the day's state
+internal fun dayPartFrom(
+    startIndex: Int,
+    count: Int,
+    perDay: Int,
+    restart: Boolean,
+    unitsBefore: Long,
+    day: Int,
+    studyDay: Boolean,
+    beforeStart: Boolean = false,
+    paused: Boolean = false,
 ): DayPart {
     if (count <= 0) return DayPart.Finished
     if (beforeStart) return DayPart.NotYet
+    if (paused) return DayPart.Paused
     if (!studyDay) return DayPart.Rest
-    val first = startIndex.toLong() + daysBefore.toLong() * perDay.coerceAtLeast(1)
+    val first = startIndex.toLong() + unitsBefore
     if (!restart && first >= count) return DayPart.Finished
     val positions = (0 until perDay.coerceAtLeast(1)).map { first + it }
     val indexes =
@@ -234,7 +269,7 @@ internal fun dayPart(
         } else {
             positions.filter { it < count }.map { it.toInt() }
         }
-    return DayPart.Part(indexes, daysBefore + 1, (indexes.last() + 1).toFloat() / count)
+    return DayPart.Part(indexes, day, (indexes.last() + 1).toFloat() / count)
 }
 
 /**

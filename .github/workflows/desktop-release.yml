@@ -596,7 +596,11 @@ jobs:
           gh release edit "$ADD" --notes-file body.md --latest=false
           android="$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 \
             --json tagName --jq '[.[].tagName | select(startswith("android-"))][0] // empty')"
-          if [ -n "$android" ] && [ "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" != "$android" ]; then
+          if [ -n "$android" ]; then
             gh release edit "$android" --latest
+            test "$(gh api "repos/$GH_REPO/releases/latest" --jq .tag_name)" != "$TAG" \
+              || { echo "::error::$TAG is the repository's Latest release"; exit 1; }
+          else
+            echo "::notice::No Android release in this private repository; keeping desktop release as Latest"
           fi
           echo "The Apple Silicon Mac added to [$ADD]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$ADD)" >> "$GITHUB_STEP_SUMMARY"
